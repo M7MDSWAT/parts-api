@@ -14,7 +14,9 @@ if not api_key:
     raise ValueError("GEMINI_API_KEY environment variable is missing!")
 
 genai.configure(api_key=api_key)
-model = genai.GenerativeModel("gemini-1.5-flash")
+
+# التعديل هنا: استخدام gemini-2.5-flash
+model = genai.GenerativeModel("gemini-2.5-flash")
 
 # رابط Webhook الباك إند الخاص بخويك
 FRIEND_WEBHOOK_URL = "https://baseerah.duckdns.org/webhook/parts-search"
@@ -24,7 +26,6 @@ class UserInput(BaseModel):
     message: str
 
 
-# 2. البرومبت الموجه لـ Gemini
 SYSTEM_PROMPT = """
 أنت خبير في استخراج معلومات قطع غيار السيارات من النصوص.
 قم باستخراج البيانات التالية فقط وإرجاعها بصيغة JSON صريح بدون أي مقدمات أو شرح:
@@ -53,7 +54,6 @@ def read_root():
 @app.post("/extract")
 async def extract_and_forward(user_input: UserInput):
     try:
-        # أ) إرسال الطلب لـ Gemini واستخراج البيانات
         prompt = f"{SYSTEM_PROMPT}\n\nنص المستخدم: {user_input.message}"
         response = model.generate_content(prompt)
 
@@ -61,7 +61,6 @@ async def extract_and_forward(user_input: UserInput):
         cleaned_text = re.sub(r"```json\s*|\s*```", "", raw_text).strip()
         extracted_data = json.loads(cleaned_text)
 
-        # ب) إرسال الـ JSON إلى Webhook خويك واستلام الرد
         async with httpx.AsyncClient(timeout=30.0) as client:
             webhook_response = await client.post(
                 FRIEND_WEBHOOK_URL, json=extracted_data
@@ -72,7 +71,6 @@ async def extract_and_forward(user_input: UserInput):
             except Exception:
                 friend_result = webhook_response.text
 
-        # ج) إرجاع الرد النهائي للشات بوت
         return {
             "status": "success",
             "extracted_data": extracted_data,
