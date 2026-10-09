@@ -16,7 +16,7 @@ if not api_key:
 genai.configure(api_key=api_key)
 
 # التعديل هنا: استخدام gemini-2.5-flash
-model = genai.GenerativeModel("gemini-2.5-flash")
+model = genai.GenerativeModel("gemini-3.8-flash")
 
 # رابط Webhook الباك إند الخاص بخويك
 FRIEND_WEBHOOK_URL = "https://baseerah.duckdns.org/webhook/parts-search"
