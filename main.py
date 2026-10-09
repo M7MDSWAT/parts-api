@@ -8,7 +8,7 @@ from pydantic import BaseModel
 
 app = FastAPI(title="Spare Parts Extractor API")
 
-# 1. إعداد Gemini
+# 1. إعداد Gemini API
 api_key = os.getenv("GEMINI_API_KEY")
 if not api_key:
     raise ValueError("GEMINI_API_KEY environment variable is missing!")
@@ -16,7 +16,7 @@ if not api_key:
 genai.configure(api_key=api_key)
 model = genai.GenerativeModel("gemini-1.5-flash")
 
-# رابط Webhook خويك
+# رابط Webhook الباك إند الخاص بخويك
 FRIEND_WEBHOOK_URL = "https://baseerah.duckdns.org/webhook/parts-search"
 
 
@@ -24,6 +24,7 @@ class UserInput(BaseModel):
     message: str
 
 
+# 2. البرومبت الموجه لـ Gemini
 SYSTEM_PROMPT = """
 أنت خبير في استخراج معلومات قطع غيار السيارات من النصوص.
 قم باستخراج البيانات التالية فقط وإرجاعها بصيغة JSON صريح بدون أي مقدمات أو شرح:
@@ -32,6 +33,15 @@ SYSTEM_PROMPT = """
 - year (سنة الصنع)
 - part_name (اسم القطعة المطلوبة)
 - condition (حالة القطعة: جديد / مستعمل / غير محدد)
+
+مثال للناتج المطلوب:
+{
+  "car_make": "تويوتا",
+  "car_model": "كامري",
+  "year": 2020,
+  "part_name": "صدام أمامي",
+  "condition": "جديد"
+}
 """
 
 
@@ -43,7 +53,7 @@ def read_root():
 @app.post("/extract")
 async def extract_and_forward(user_input: UserInput):
     try:
-        # أ) استخراج البيانات من Gemini
+        # أ) إرسال الطلب لـ Gemini واستخراج البيانات
         prompt = f"{SYSTEM_PROMPT}\n\nنص المستخدم: {user_input.message}"
         response = model.generate_content(prompt)
 
@@ -51,19 +61,18 @@ async def extract_and_forward(user_input: UserInput):
         cleaned_text = re.sub(r"```json\s*|\s*```", "", raw_text).strip()
         extracted_data = json.loads(cleaned_text)
 
-        # ب) إرسال الـ JSON إلى سيرفر خويك واستلام الرد منه
+        # ب) إرسال الـ JSON إلى Webhook خويك واستلام الرد
         async with httpx.AsyncClient(timeout=30.0) as client:
             webhook_response = await client.post(
                 FRIEND_WEBHOOK_URL, json=extracted_data
             )
 
-            # تحويل رد سيرفر خويك لـ JSON ليتم عرضه للعميل
             try:
                 friend_result = webhook_response.json()
             except Exception:
                 friend_result = webhook_response.text
 
-        # ج) إرجاع النتيجة النهائية للعميل
+        # ج) إرجاع الرد النهائي للشات بوت
         return {
             "status": "success",
             "extracted_data": extracted_data,
@@ -76,7 +85,7 @@ async def extract_and_forward(user_input: UserInput):
         )
     except httpx.RequestError as e:
         raise HTTPException(
-            status_code=502, detail=f"تعذر الاتصال بسيرفر خويك: {str(e)}"
+            status_code=502, detail=f"تعذر الاتصال بسيرفر الباك إند: {str(e)}"
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
