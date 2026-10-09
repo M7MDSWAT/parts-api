@@ -27,22 +27,17 @@ class UserInput(BaseModel):
 
 
 SYSTEM_PROMPT = """
-أنت خبير في استخراج معلومات قطع غيار السيارات من النصوص.
-قم باستخراج البيانات التالية فقط وإرجاعها بصيغة JSON صريح بدون أي مقدمات أو شرح:
-- car_make (ماركة السيارة)
-- car_model (موديل السيارة)
-- year (سنة الصنع)
-- part_name (اسم القطعة المطلوبة)
-- condition (حالة القطعة: جديد / مستعمل / غير محدد)
+You are an expert parts extraction assistant. 
+Extract automotive part query details from the user text and return ONLY a valid JSON object with the following keys:
+- "vin": String (Extract VIN if mentioned, otherwise "")
+- "make": String or null
+- "model": String or null
+- "year": Integer or null
+- "partName": String or null
+- "partType": String (e.g. "aftermarket", "oem", "original", or null)
+- "condition": String ("NEW" or "USED" or null)
 
-مثال للناتج المطلوب:
-{
-  "car_make": "تويوتا",
-  "car_model": "كامري",
-  "year": 2020,
-  "part_name": "صدام أمامي",
-  "condition": "جديد"
-}
+Do not return any markdown, explainers, or extra text. Only JSON.
 """
 
 
